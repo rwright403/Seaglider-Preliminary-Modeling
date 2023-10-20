@@ -26,6 +26,8 @@ l_be_cont = 0.0254*l_be_cont #m
 l_travel = 0.0254*l_travel #m
 
 V_be_cont = np.pi*l_be_cont*(diam_be/2)**2 #m^3
+V_be_mid = np.pi*(l_be_cont+l_travel/2)*(diam_be/2)**2 #m^3
+#V_be_exp = np.pi*(l_be_cont+l_travel)*(diam_be/2)**2 #m^3
 
 #Hydrofoil setup
 hfoil_coeff = 0.0025 #Area of wing * Coeff Lift
@@ -49,7 +51,7 @@ v_y_prev = 0 #m/s
 v_x_prev = v #m/s --> starting from top so all velocity in x
 
 L = 0.5*rho_w*hfoil_coeff*v**2
-delta_l = l_travel/2
+delta_l = 0
 
 s_x_arr = []
 s_y_arr = []
@@ -57,9 +59,9 @@ s_y_arr = []
 ###TODO: MIXING UP BUOYANCY ENGINE POSITIONS AND LIFT SIGN IN LOOP
 
 ###START Trajectory Sim --> going down (L+)
-while(x < 2*np.pi):
+while(x < np.pi):
     #Update glider
-    V_be = V_be_cont + delta_l*diam_be #m^3
+    V_be = V_be_mid + delta_l*diam_be #m^3
 
     F_b = rho_w*g*(V_hull+V_be)
 
@@ -85,9 +87,10 @@ while(x < 2*np.pi):
 
     x = x +0.05
     delta_l = l_travel*np.sin(x+np.pi/2)
+    print(delta_l)
 
 ###CONTINUE Trajectory Sim --> going up (L-)
-print(x)
+print(l_travel)
 delta_l = l_travel/2
 x = 0
 while(x < 2*np.pi):
@@ -95,11 +98,14 @@ while(x < 2*np.pi):
     V_be = V_be_cont + delta_l*diam_be #m^3
 
     F_b = rho_w*g*(V_hull+V_be)
+    print("Fb", F_b)
 
-    theta = np.tanh( ((l_hull+delta_l/2)*rho_w*g*V_be) / (m_glider*g*stability) )
+    theta = -np.tanh( ((l_hull+delta_l/2)*rho_w*g*V_be) / (m_glider*g*stability) )
 
     #Find resultant forces 
     F_y = rho_w*g*(V_hull+V_be) - m_glider*g - L*np.sin(theta)
+    print("Fy", F_y)
+
     F_x = L*np.cos(theta)
 
     #"integrate" w timestep
@@ -117,8 +123,8 @@ while(x < 2*np.pi):
     s_x_prev = s_x
 
     x = x + 0.05
-    delta_l = l_travel*np.cos(x-np.pi)
-    print(delta_l)
+    delta_l = l_travel*np.sin(x+np.pi/2)
+    print("delta_l", delta_l)
 
 ###GRAPH
 plt.plot(s_x_arr, s_y_arr, label='Seaglider Position', color='blue')
