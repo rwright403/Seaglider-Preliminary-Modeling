@@ -9,17 +9,16 @@ g = 9.81 #m/s^2
 
 #Pressure Hull
 diam_hull = 4.5 #in
-l_hull = 0.70358 #in
+l_hull = 0.70358 #m
 
 diam_hull = 0.0254*diam_hull #m
-l_hull = 0.0254*l_hull #m
 
 V_hull = np.pi*l_hull*(diam_hull/2)**2 #m^3
 
 #Buoyancy Engine
 diam_be = 4.07 #in
 l_be_cont = 10.3 #in
-l_travel = 4 #in
+l_travel = 8 #in
 
 diam_be = 0.0254*diam_be #m
 l_be_cont = 0.0254*l_be_cont #m
@@ -41,7 +40,7 @@ dt = 0.1 #s
 delta_be = 0.01 #in
 
 #delta_be = 0.0254*delta_be #m
-x = 0
+i = 0
 
 ###SETUP
 s_y_prev = 0 #m
@@ -56,19 +55,20 @@ delta_l = 0
 s_x_arr = []
 s_y_arr = []
 
-###TODO: MIXING UP BUOYANCY ENGINE POSITIONS AND LIFT SIGN IN LOOP
+###TODO: FORGOT L_BE CONTRACT IN BUOYANCY
 
 ###START Trajectory Sim --> going down (L+)
-while(x < np.pi):
+while(i < np.pi):
     #Update glider
     V_be = V_be_mid + delta_l*diam_be #m^3
 
-    F_b = rho_w*g*(V_hull+V_be)
+    F_b = rho_w*g*(V_hull + V_be)
 
     theta = np.tanh( ((l_hull+delta_l/2)*rho_w*g*V_be) / (m_glider*g*stability) )
+    #print("Fb", F_b, "l", delta_l, "V_be", V_be )
 
     #Find resultant forces 
-    F_y = rho_w*g*(V_hull+V_be) - m_glider*g + L*np.sin(theta)
+    F_y = rho_w*g*(V_hull+ V_be ) - m_glider*g + L*np.sin(theta)
     F_x = L*np.cos(theta)
 
     #"integrate" w timestep
@@ -85,26 +85,25 @@ while(x < np.pi):
     s_y_prev = s_y
     s_x_prev = s_x
 
-    x = x +0.05
-    delta_l = l_travel*np.sin(x+np.pi/2)
-    print(delta_l)
+    i = i +0.05
+    delta_l = -(l_travel/2)*np.sin(i)
+    #print(delta_l)
 
+
+i=0
 ###CONTINUE Trajectory Sim --> going up (L-)
-print(l_travel)
-delta_l = l_travel/2
-x = 0
-while(x < 2*np.pi):
+while(i < np.pi):
     #Update glider
-    V_be = V_be_cont + delta_l*diam_be #m^3
+    V_be = V_be_mid + delta_l*diam_be #m^3
 
     F_b = rho_w*g*(V_hull+V_be)
-    print("Fb", F_b)
+    print("Fb", F_b, "l", delta_l, "V_be", V_be)
 
     theta = -np.tanh( ((l_hull+delta_l/2)*rho_w*g*V_be) / (m_glider*g*stability) )
 
     #Find resultant forces 
     F_y = rho_w*g*(V_hull+V_be) - m_glider*g - L*np.sin(theta)
-    print("Fy", F_y)
+    #print("Fy", F_y)
 
     F_x = L*np.cos(theta)
 
@@ -122,9 +121,10 @@ while(x < 2*np.pi):
     s_y_prev = s_y
     s_x_prev = s_x
 
-    x = x + 0.05
-    delta_l = l_travel*np.sin(x+np.pi/2)
-    print("delta_l", delta_l)
+    i = i + 0.05
+    delta_l = l_travel*np.sin(i)
+    #print("delta_l", delta_l)
+
 
 ###GRAPH
 plt.plot(s_x_arr, s_y_arr, label='Seaglider Position', color='blue')
