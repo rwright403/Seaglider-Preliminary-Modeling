@@ -92,7 +92,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
 
         #setup current_len
         current_len = midpoint
-        print("current length: ", current_len)
+        #print("current length: ", current_len)
         time = 0
 
         diving = True
@@ -117,7 +117,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
             
             F_x = L*np.cos(theta) #NOTE: Tried adding 0.7 to sim drag this worked, separate term seemed to nuke simnot sure????
 
-            print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
+            #print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
             #print(s_x, F_y)
 
             #"integrate" w timestep
@@ -127,7 +127,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
             v_x_arr.append(v_x)
             #print(v_x)
 
-            #print(v_y,v_x)
+            print("vertical speed: ", v_y,"horizontal speed: ", v_x)
 
             s_y = s_y_prev + v_y
             s_x = s_x_prev + v_x
@@ -193,9 +193,9 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
         #print(sim_depth)
 
 
-    #print("allowable extension: ",be.allowable_ext)
-    #print("max fwd speed: ",max_speed)
-    #print("glide period: ",glide_period)
+    print("allowable extension: ",be.allowable_ext)
+    print("max fwd speed: ",max_speed)
+    print("glide period: ",glide_period)
 
     output_arr.append(be.allowable_ext)
     output_arr.append(max_speed)
@@ -213,15 +213,17 @@ hfoil_coeff = 0.008 #Area of wing * Coeff Lift
 percent_stability = 0.2 #%
 rho_water =997 #kg/m^3
 midpoint = intometer(2)
-internal_mass = 7 #kg
+internal_mass = 6 #kg
 
 #geometry
-buoyeng = BuoyancyEngine(3,4,10.3, 8, 0.08*0.0254,midpoint)
+buoyeng = BuoyancyEngine(4,5.15,10.3, 8, 0.08*0.0254,midpoint)
 
-hull_id = intometer(4.0)
-hull_od = intometer(4.5)
+hull_id = intometer(5.0)
+hull_od = intometer(5.5)
 
 hull_len = (internal_mass + buoyeng.mass - rho_water*buoyeng.V_mid) / ( np.pi *0.25* (rho_water*(hull_od**2) - RHO_PVC*(hull_od**2 - hull_id**2)) )
+
+print("hull_len: ", hull_len)
 
 preshull = PressureHull( hull_id, hull_od, hull_len, percent_stability)
 
