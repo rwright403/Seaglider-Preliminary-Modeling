@@ -136,6 +136,7 @@ class seaglider_trajectory():
             #after sim check max allowable depth. If we havent hit save, if we have break out of while loop
             #if(sim_depth < max_allowable_depth):
             #    be.allowable_ext = max_be_extension
+            """
             plt.subplot(1,2,1)  
             plt.plot(self.s_x_arr, self.s_y_arr, label='Seaglider Position', color='blue')
             for i in s_x_change_down_arr:
@@ -153,7 +154,7 @@ class seaglider_trajectory():
             plt.show()
             ###iterate!!!!!
             self.be.allowable_ext+= constants.BE_EXTENSION_STEP
-
+            """
             #print(sim_depth)
 
         plt.subplot(1,2,1)  

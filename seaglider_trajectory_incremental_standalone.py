@@ -8,7 +8,7 @@ def intometer(x):
 RHO_PVC = 1380 #kg/m^3
 GRAVITY = 9.81 #m/s^2
 TIMESTEP = 0.5 #s
-BE_EXTENSION_STEP = intometer(0.625) #TODO: FILL IN WITH REAL VALUES LATER!!!!!
+BE_EXTENSION_STEP = intometer(0.625)
 #TODO: ISSUE WITH IT BEING 1.75
 
 
@@ -117,7 +117,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
             
             F_x = L*np.cos(theta) #NOTE: Tried adding 0.7 to sim drag this worked, separate term seemed to nuke simnot sure????
 
-            #print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
+            print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
             #print(s_x, F_y)
 
             #"integrate" w timestep
@@ -164,7 +164,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
         
         sim_depth = np.min(s_y_arr)
         max_speed = np.max(v_x_arr)
-        glide_period = (4/3)*s_x_arr[-1]
+        glide_period = s_x_arr[-1]
 
         #after sim check max allowable depth. If we havent hit save, if we have break out of while loop
         #if(sim_depth < max_allowable_depth):
@@ -176,13 +176,13 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
         #print(sim_depth)
 
 
-    print("allowable extension: ",be.allowable_ext)
-    print("max fwd speed: ",max_speed)
+    print("allowable extension: ",be.allowable_ext*39.3701, " (in)")
+    print("max fwd speed: ",max_speed, " (m/s)")
     print("glide period: ",glide_period, '\n')
 
-    print("be id: ",be.id)
-    print("hull id: ",hull.id)
-    print("mass: ", m_glider)
+    print("be id: ",39.3701*be.id, " (in)")
+    print("hull id: ",39.3701*hull.id, " (in)")
+    print("total glider mass: ", m_glider, " (kg)")
 
 
     output_arr.append(be.allowable_ext)
@@ -216,20 +216,20 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
 
 ####inputs:
 hfoil_coeff = 0.008 #Area of wing * Coeff Lift
-percent_stability = 0.2 #%
+percent_stability = 0.15 #%
 rho_water =997 #kg/m^3
-midpoint = intometer(2)
-internal_mass = 8 #kg
+midpoint = intometer(4)
+internal_mass = 11 #kg
 
 #geometry
-buoyeng = BuoyancyEngine(3,4,10.3, 8, 0.08*0.0254,midpoint)
+buoyeng = BuoyancyEngine(4.5,5.515,10.3, 8, 0.08*0.0254,midpoint)
 
-hull_id = intometer(4.0)
-hull_od = intometer(4.5)
+hull_id = intometer(5.0)
+hull_od = intometer(5.5)
 
 hull_len = (internal_mass + buoyeng.mass - rho_water*buoyeng.V_mid) / ( np.pi *0.25* (rho_water*(hull_od**2) - RHO_PVC*(hull_od**2 - hull_id**2)) )
 
-print("hull_len: ", hull_len)
+print("hull_len: ", 39.3701*hull_len, " (in)")
 
 preshull = PressureHull( hull_id, hull_od, hull_len, percent_stability)
 

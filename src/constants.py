@@ -11,7 +11,7 @@ def intometer(x):
 
 GRAVITY = 9.81 #m/s^2
 TIMESTEP = 0.5 #s
-BE_EXTENSION_STEP = intometer(0.0375)
+BE_EXTENSION_STEP = intometer(0.05)
 max_allowable_depth = -15 #m
 
 RHO_PVC = 1380 #kg/m^3
@@ -27,10 +27,10 @@ midpoint = intometer(4)
 internal_mass = 10 #kg
 
 #geometry
-buoyeng = BuoyancyEngine(intometer(4),intometer(5.15),intometer(10.3), intometer(8), 0.08*0.0254, midpoint)
+buoyeng = BuoyancyEngine(intometer(3),intometer(4),intometer(10.3), intometer(8), 0.08*0.0254, midpoint)
 
-hull_id = intometer(5.0)
-hull_od = intometer(5.5)
+hull_id = intometer(4.0)
+hull_od = intometer(4.5)
 
 hull_len = (internal_mass + buoyeng.mass - rho_water*buoyeng.V_mid) / ( np.pi *0.25* (rho_water*(hull_od**2) - RHO_PVC*(hull_od**2 - hull_id**2)) )
 
