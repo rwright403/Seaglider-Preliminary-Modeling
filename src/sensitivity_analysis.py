@@ -130,7 +130,7 @@ if constants.sensitivity_var=="be":
         print(constants.GRAVITY*m_glider, constants.GRAVITY*constants.rho_water*(ph.V_hull+b.V_mid))
         print("VOLUME!!!",ph.V_hull,b.V_mid)
 
-
+    
         big_data.append( sensitivityAnalysis(constants.hfoil_coeff,m_glider,constants.rho_water,b,ph) )
         i = update_i(i)
     produce_time_graphs(big_data,i_arr)

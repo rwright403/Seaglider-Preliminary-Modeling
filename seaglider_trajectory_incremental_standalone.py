@@ -98,7 +98,6 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
         diving = True
         contunuing_criteria = True
         while (contunuing_criteria == True):
-            #BUG: it calculates volume wrong in here!!!!
             #calc be volume
             V_be = be.V_cont + (0.25*np.pi*be.id**2)*current_len
             #print(buoyeng.V_mid - buoyeng.V_cont, (0.25*np.pi*be.id**2)*current_len)
@@ -117,7 +116,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
             
             F_x = L*np.cos(theta) #NOTE: Tried adding 0.7 to sim drag this worked, separate term seemed to nuke simnot sure????
 
-            print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
+            #print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
             #print(s_x, F_y)
 
             #"integrate" w timestep
@@ -206,7 +205,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
     plt.subplot(1,2,2)
     plt.plot(s_x_arr, be_pos_arr, label='BE Position Over X-Pos', color='blue')
     plt.xlabel('X-Pos (m)')
-    plt.ylabel('B.E. Pos (m)')
+    plt.ylabel('B.E. Pos (in)')
     plt.show()
 
     return output_arr
@@ -237,11 +236,11 @@ m_glider = preshull.mass + buoyeng.mass +internal_mass #1.75 #rho_water*(preshul
 
 #print(m_glider*GRAVITY, rho_water*GRAVITY*(preshull.V_hull+buoyeng.V_mid))
 
-
-
 #17.625 rho_water*(preshull.V_hull+buoyeng.V_cont + (0.25*np.pi*(buoyeng.id)**2) *buoyeng.travel_len*0.5)
 #print(m_glider, m_glider*GRAVITY,GRAVITY*rho_water*(preshull.V_hull+buoyeng.V_cont + (0.25*np.pi*(buoyeng.id)**2) *buoyeng.travel_len*0.5) )
 
 #print("update:", m_glider, midpoint)
 seaglider_trajectory(rho_water, buoyeng, preshull, midpoint, m_glider, hfoil_coeff)
 #print(39.3701*buoyeng.allowable_ext)
+
+#print(preshull.V_hull+  (0.25*np.pi*be.id**2)*current_len)
