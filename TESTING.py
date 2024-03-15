@@ -31,11 +31,6 @@ class BuoyancyEngine:
         self.allowable_ext = midpoint
 
         self.mass = RHO_PVC*0.25*np.pi*(self.od**2-self.id**2)*self.cont_len
-        #print("be mass: ", self.mass)
-
-
-###vol was calc wrong????
-
 
 class PressureHull:
     def __init__(self,id,od,len,percent_stability):
@@ -43,63 +38,49 @@ class PressureHull:
         self.od = od
         self.l_hull = len
         self.percent_stability = percent_stability
-
-        #print(self.od)
         
         self.stability = percent_stability*self.od
         self.V_hull = 0.25*np.pi*self.l_hull*self.od**2
 
         self.mass = RHO_PVC*(np.pi/4*(self.od**2-self.id**2)*self.l_hull)
-        #print("hull mass: ", self.mass)
 
 def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
     max_speed = 0
     glide_period = 0
     output_arr = []
 
-
     ###iteratively solve BE extension distances w sim in first while loop
-
     max_allowable_depth = -20 #m
     sim_depth = 0 #m
 
     ###remember to save the final valid numbers, probably use a break statement
     while(sim_depth > max_allowable_depth):
         ####START Trajectory Sim in second while loop 
-        ###SETUP CONSTANTS
-        s_y_prev = 0 #m
-        s_y = 0 #m
-        s_x_prev = 0 #m
-        s_x = 0 #m
+        i = 2
 
-        v = 1 #m/s
-        #v_y_prev = 0.00001 #m/s
-        #v_x_prev = v #m/s --> starting from top so all velocity in x
+        x_accel_arr = [0, 0]
+        y_accel_arr = [0, 0]
 
-        v_x_arr = []
+        x_vel_arr = [0, 0]
+        y_vel_arr = [0, 0]
+        
+        x_disp_arr = [0, 0]
+        y_disp_arr = [0, 0]
+
+        time_arr = [0, 0,TIMESTEP]
+
         max_speed = 0
 
-        s_x_arr = []
-        s_y_arr = []
         s_x_change_down_arr = []
-        s_x_change_up_arr = []
-
-        time_arr = []
-        be_pos_arr = []
-        #--> going down (L+)
-        L = 0.5*rho_water*hfoil_coeff*v**2
-
+        s_x_change_up_arr = []        
+        be_pos_arr = [0, 0]
 
         #setup current_len
         current_len = midpoint
-        #print("current length: ", current_len)
-        time = 0
-
-        V_be = be.V_cont + (0.25*np.pi*be.id**2)*be.midpoint
-        #X_midpoint = ( hull.V_hull*0.5*hull.l_hull + be.V_cont*(0.5*be.cont_len*hull.l_hull) +   )/(hull.V_hull + V_be ) 
-
+        #print(current_len)
         diving = True
         contunuing_criteria = True
+
         while (contunuing_criteria == True):
             #calc be volume
             V_be = be.V_cont + (0.25*np.pi*be.id**2)*current_len
@@ -107,54 +88,45 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
             #solve glide angle
             theta = np.arctan( ( hull.l_hull * (rho_water*GRAVITY*(0.25*np.pi*be.id**2)*current_len) ) / (m_glider*GRAVITY*hull.stability) )
 
+            #solve lift
+            L = 0.5*rho_water*hfoil_coeff*(x_vel_arr[-1]**2 + y_vel_arr[-1]**2)
 
-
-
-
-            theta = 1
-    
             #solve Fy, Fx
-            if(s_y <= s_y_prev):
+            if(y_disp_arr[i-1] <= x_disp_arr[i-2]):
                 F_y = rho_water*GRAVITY*(hull.V_hull + V_be ) - m_glider*GRAVITY + L*np.sin(theta)
             else:
                 F_y = rho_water*GRAVITY*(hull.V_hull + V_be ) - m_glider*GRAVITY - L*np.sin(theta)
             
-            F_x = L*np.cos(theta) #NOTE: Tried adding 0.7 to sim drag this worked, separate term seemed to nuke simnot sure????
+            F_x = L*np.cos(theta) 
 
-            #print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta), F_y)
-            #print(s_x, F_y)
+            #solve acceleration
+            y_accel_arr.append(F_y/m_glider)
+            x_accel_arr.append(F_x/m_glider)
 
-            #"integrate" w timestep
-            v_y = (F_y/m_glider)*TIMESTEP
-            v_x = (F_x/m_glider)*TIMESTEP
+            #solve velocity with trapezoidal method to approx integral
+            y_vel_arr.append(y_vel_arr[i-1] + np.trapz(y=y_accel_arr[:i+1],dx=TIMESTEP))
+            x_vel_arr.append(x_vel_arr[i-1] + np.trapz(y=x_accel_arr[:i+1],dx=TIMESTEP))
 
-            v_x_arr.append(v_x)
-            #print(v_x)
+            #solve displacement with trapezoidal method to approx integral
+            y_disp_arr.append(y_disp_arr[i-1] + np.trapz(y=y_vel_arr[:i+1],dx=TIMESTEP))
+            x_disp_arr.append(x_disp_arr[i-1] + np.trapz(y=x_vel_arr[:i+1],dx=TIMESTEP))
 
-            #print("vertical speed: ", v_y,"horizontal speed: ", v_x)
+            #print(y_accel_arr[-1], 39.3701*current_len, y_vel_arr[-1])
 
-            s_y = s_y_prev + v_y*TIMESTEP
-            s_x = s_x_prev + v_x*TIMESTEP
-
-            s_x_arr.append(s_x)
-            s_y_arr.append(s_y)
-
-            s_y_prev = s_y
-            s_x_prev = s_x
-
-            print("THETA: ", 180/np.pi*theta, "x pos: ", s_x_arr[-1])
-
-
+            #print(y_vel_arr[-1],x_vel_arr[-1])
+            #print(180/np.pi *theta, F_x, F_y, y_accel_arr[-1], x_vel_arr[i], y_vel_arr[i])
+            print("F_y: ", F_y, "lift: ", L, "y accel: ", y_accel_arr[-1], "y_vel: ", y_vel_arr[-1], "y_disp: ", y_disp_arr[-1], 39.3701*current_len)
+            #print(rho_water*GRAVITY*(hull.V_hull + V_be ), m_glider*GRAVITY, L*np.sin(theta))
 
             if( current_len <= (midpoint - be.allowable_ext) and diving == True):
                 diving = False
-                s_x_change_up_arr.append(s_x)
+                s_x_change_up_arr.append(x_disp_arr[i])
                 #print("going up", s_x)
 
             if( current_len >= (midpoint + be.allowable_ext) and diving == False):
                 diving = True
                 contunuing_criteria = False
-                s_x_change_down_arr.append(s_x)
+                s_x_change_down_arr.append(x_disp_arr[i])
                 #print("going down", s_x)
 
             if diving == True:
@@ -163,15 +135,16 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
                 current_len += be.laspeed*TIMESTEP
 
             #print(theta, F_y, v_y, v_x, s_x, current_len)
-            time = time + TIMESTEP
-            time_arr.append(time)
+            
+            time_arr.append(time_arr[i] + TIMESTEP)
             be_pos_arr.append(39.3701*current_len)
+            i+= 1
 
               
         
-        sim_depth = np.min(s_y_arr)
-        max_speed = np.max(v_x_arr)
-        glide_period = s_x_arr[-1]
+        sim_depth = np.min(y_disp_arr)
+        max_speed = np.max(x_vel_arr)
+        glide_period = x_disp_arr[-1]
 
         #after sim check max allowable depth. If we havent hit save, if we have break out of while loop
         #if(sim_depth < max_allowable_depth):
@@ -181,6 +154,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
         be.allowable_ext+= BE_EXTENSION_STEP
 
         #print(sim_depth)
+
 
 
     print("allowable extension: ",be.allowable_ext*39.3701, " (in)")
@@ -201,7 +175,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
 
 
     plt.subplot(1,2,1)  
-    plt.plot(s_x_arr, s_y_arr, label='Seaglider Position', color='blue')
+    plt.plot(x_disp_arr, y_disp_arr, label='Seaglider Position', color='blue')
     for i in s_x_change_down_arr:
         plt.axvline(x=i, color='r', linestyle='--', label='change up')
     for i in s_x_change_up_arr:
@@ -211,7 +185,7 @@ def seaglider_trajectory(rho_water, be, hull, midpoint, m_glider, hfoil_coeff):
     plt.ylabel('Y-Pos (m)')
 
     plt.subplot(1,2,2)
-    plt.plot(s_x_arr, be_pos_arr, label='BE Position Over X-Pos', color='blue')
+    plt.plot(x_disp_arr, be_pos_arr, label='BE Position Over X-Pos', color='blue')
     plt.xlabel('X-Pos (m)')
     plt.ylabel('B.E. Pos (in)')
     plt.show()
@@ -240,15 +214,8 @@ print(buoyeng.mass)
 print("hull_len: ", 39.3701*hull_len, " (in)")
 
 preshull = PressureHull( hull_id, hull_od, hull_len, percent_stability)
-
 m_glider = preshull.mass + buoyeng.mass +internal_mass #1.75 #rho_water*(preshull.V_hull+buoyeng.V_ext)+1.75
 
-#print(m_glider*GRAVITY, rho_water*GRAVITY*(preshull.V_hull+buoyeng.V_mid))
-
-#17.625 rho_water*(preshull.V_hull+buoyeng.V_cont + (0.25*np.pi*(buoyeng.id)**2) *buoyeng.travel_len*0.5)
-#print(m_glider, m_glider*GRAVITY,GRAVITY*rho_water*(preshull.V_hull+buoyeng.V_cont + (0.25*np.pi*(buoyeng.id)**2) *buoyeng.travel_len*0.5) )
-
-#print("update:", m_glider, midpoint)
 seaglider_trajectory(rho_water, buoyeng, preshull, midpoint, m_glider, hfoil_coeff)
 #print(39.3701*buoyeng.allowable_ext)
 
