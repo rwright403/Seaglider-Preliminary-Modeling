@@ -157,24 +157,24 @@ class SeagliderFSM:
 
         self.current_len = midpoint
 
-        self.i = 1
+        self.i = 0
 
-        self.x_accel_arr = [0, 0]
-        self.y_accel_arr = [0, 0]
+        self.x_accel_arr = [0]
+        self.y_accel_arr = [0]
 
-        self.x_vel_arr = [0, 0]
-        self.y_vel_arr = [0, 0]
+        self.x_vel_arr = [0]
+        self.y_vel_arr = [0]
         
-        self.x_disp_arr = [0, 0]
-        self.y_disp_arr = [0, 0]
+        self.x_disp_arr = [0]
+        self.y_disp_arr = [0]
 
-        self.time_arr = [0, 0]
+        self.time_arr = [0]
 
         self.max_speed = 0
 
         self.s_x_change_down_arr = []
         self.s_x_change_up_arr = []        
-        self.be_pos_arr = [4,4]
+        self.be_pos_arr = [4]
 
         #setup current_len
         self.current_len = midpoint
@@ -246,6 +246,7 @@ class SeagliderFSM:
         #print("theta: ", self.theta, "lift coeff: ", self.lift_coeff, "lift: ", self.L, "velo: ", (self.x_vel_arr[-1]**2 + self.y_vel_arr[-1]**2)**0.5, "net y force: ", self.F_y, "be pos: ", 39.3701*self.current_len)
 
 
+
     """
     method: kinematics
     Purpose: uses the net force to solve acceleration, then the trapezoidal method to approx integrals for velo and displ.
@@ -260,15 +261,18 @@ class SeagliderFSM:
         self.x_accel_arr.append(self.F_x/m_glider)
 
         #solve velocity with trapezoidal method to approx integral
-        self.y_vel_arr.append(self.y_vel_arr[self.i-1] + np.trapz(y=self.y_accel_arr[self.i-1:self.i+1],dx=TIMESTEP))
-        self.x_vel_arr.append(self.x_vel_arr[self.i-1] + np.trapz(y=self.x_accel_arr[self.i-1:self.i+1],dx=TIMESTEP))
+        self.y_vel_arr.append(self.y_vel_arr[-1] + np.trapz(y=self.y_accel_arr[-2:],dx=TIMESTEP))
+        self.x_vel_arr.append(self.x_vel_arr[-1] + np.trapz(y=self.x_accel_arr[-2:],dx=TIMESTEP))
 
         #solve displacement with trapezoidal method to approx integral
-        self.y_disp_arr.append(self.y_disp_arr[self.i-1] + np.trapz(y=self.y_vel_arr[self.i-1:self.i+1],dx=TIMESTEP))
-        self.x_disp_arr.append(self.x_disp_arr[self.i-1] + np.trapz(y=self.x_vel_arr[self.i-1:self.i+1],dx=TIMESTEP))
+        self.y_disp_arr.append(self.y_disp_arr[-1] + np.trapz(y=self.y_vel_arr[-2:],dx=TIMESTEP))
+        self.x_disp_arr.append(self.x_disp_arr[-1] + np.trapz(y=self.x_vel_arr[-2:],dx=TIMESTEP))
 
         #iterate
         self.i+=1
+
+        print("velo: ", (self.x_vel_arr[-1]**2 + self.y_vel_arr[-1]**2)**0.5, "x velo: ", self.x_vel_arr[-1], "y velo: ",self.y_vel_arr[-1] )
+            
 
         """debug print statements"""
         #print(self.F_x/m_glider, self.y_accel_arr[-1])
@@ -279,6 +283,10 @@ class SeagliderFSM:
         #print(self.x_disp_arr[-1],self.F_y)
         #print( (self.x_vel_arr[-1]**2+self.y_vel_arr[-1]**2)**0.5)
         #print("x accel: ", self.x_accel_arr[-1], "y accel: ", self.y_accel_arr[-1], "x vel: ", self.x_vel_arr[-1],"y vel: ", self.y_vel_arr[-1], "x disp: ", self.x_disp_arr[-1])
+        #print(self.F_y, " | ",self.y_accel_arr[-2],self.y_accel_arr[-1])
+        #print("prev: ", self.y_vel_arr[-1], "trap: ", np.trapz(y=self.y_accel_arr[-2:],dx=TIMESTEP))
+        #print(self.F_y, " | ",self.y_accel_arr[-2],self.y_accel_arr[-1])
+        
 
 
 
@@ -299,7 +307,7 @@ class SeagliderFSM:
         print("start trajectory", self.current_state)
 
 
-###BUG: HERE!!!!
+
         """
         state: hold_be_pos_up
         previous state: move_up_accel    next state: move_up_deccel
@@ -316,7 +324,7 @@ class SeagliderFSM:
 
             current_time = 0
 
-            while current_time <= self.time_hold_up:
+            while current_time < self.time_hold_up:
 
                 self.calc_hydro_force(self.current_len, self.V_be, self.hydrofoil)
             
@@ -332,16 +340,15 @@ class SeagliderFSM:
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
-                print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
+                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta), "velo: ", (self.x_vel_arr[-1]**2 + self.y_vel_arr[-1]**2)**0.5, "theta: ", (180/np.pi)*self.theta)
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
-            
+        
             print("state entering: move up deccel", self.x_accel_arr[-1], self.F_y)
             self.current_state = 'end'
             print(self.current_state)
 ###BUG: HERE!!!!
-
 
 
             """
@@ -357,7 +364,7 @@ class SeagliderFSM:
             current_time = 0
             print("holding time (s): ", self.time_hold_down)
 
-            while current_time <= self.time_hold_down:
+            while current_time < self.time_hold_down:
 
                 self.calc_hydro_force(self.current_len, self.V_be, self.hydrofoil)
 
@@ -374,7 +381,7 @@ class SeagliderFSM:
 
                 """debug print statements"""
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
-                print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", +self.L*np.cos(self.theta), "y drag", self.D*np.sin(self.theta))
+                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", +self.L*np.cos(self.theta), "y drag", self.D*np.sin(self.theta))
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
 
             print("state entering: move down deccel", self.x_accel_arr[-1], self.F_y)
@@ -411,7 +418,7 @@ class SeagliderFSM:
                 """debug print statements"""
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
-                print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", +self.L*np.cos(self.theta), "y drag", +self.D*np.sin(self.theta))
+                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", +self.L*np.cos(self.theta), "y drag", +self.D*np.sin(self.theta))
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
                 #print(self.F_y, 39.3701*self.current_len)
 
@@ -447,7 +454,7 @@ class SeagliderFSM:
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
-                print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
+                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
@@ -456,7 +463,6 @@ class SeagliderFSM:
             print("state entering: hold_be_pos_up, ", self.x_disp_arr[-1])
             self.current_state = 'hold_be_pos_up'
             
-
 
 
             """
@@ -485,7 +491,7 @@ class SeagliderFSM:
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
-                print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", self.L*np.cos(self.theta), "y drag", self.D*np.sin(self.theta))
+                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", self.L*np.cos(self.theta), "y drag", self.D*np.sin(self.theta))
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
@@ -523,7 +529,7 @@ class SeagliderFSM:
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
-                print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
+                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta), "theta: ", self.theta)
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
