@@ -8,7 +8,7 @@ RHO_WATER =997 #kg/m^3
 GRAVITY = 9.81 #m/s^2
 TIMESTEP = 0.1 #s
 
-HULL_DRAG = [(0.2,0.01),(0.4,0.03),(0.6,0.09),(0.8,0.16),(1,0.21)]
+HULL_DRAG = [(0.05, 0),(0.2,0.01),(0.4,0.03),(0.6,0.09),(0.8,0.16),(1,0.21)]
 hull_drag_speed_values, hull_cd_values = zip(*HULL_DRAG)
 
 
@@ -187,12 +187,21 @@ class SeagliderFSM:
         #setup current_len
         self.current_len = midpoint
         self.V_be = 0
+
         self.theta = 0
+        self.phi = 0
+        self.aoa = 0
 
         self.F_y = 0
         self.F_x = 0
 
         self.lift_coeff = 0
+
+
+        self.aoa_arr = [0]
+        self.phi_arr = [0]
+        self.theta_arr = [0]
+        self.delta_X_cb_arr = [0]
 
         #solve cg location: we are assuming cg is placed such that glider is horizontal at midpoint b.e.
         self.X_cb = ( (hull.V_hull*0.5*hull.l_hull) + (be.V_cont*(hull.l_hull+0.5*be.cont_len)) + ((be.V_mid-be.V_cont)*(hull.l_hull+be.cont_len+0.5*be.midpoint)) ) / (hull.V_hull + be.V_mid)
@@ -210,13 +219,25 @@ class SeagliderFSM:
     Returns: nothing
     Updates: self.theta --> unsigned (positive) value of the glide angle
     """
+    #TODO: GET RID OF VBE AS AN INPUT SINCE IT IS STORED
     def calc_theta(self, current_len, V_be):
-        self.X_cb = ( (hull.V_hull*0.5*hull.l_hull) + (be.V_cont*(hull.l_hull+0.5*be.cont_len)) + ((be.V_mid-be.V_cont)*(hull.l_hull+be.cont_len+0.5*current_len)) ) / (hull.V_hull + V_be)       
-        delta_X_cb = self.X_cb-self.X_cg
+        self.X_cb = ( (hull.V_hull*0.5*hull.l_hull) + (be.V_cont*(hull.l_hull+0.5*be.cont_len)) + ((self.V_be-be.V_cont)*(hull.l_hull+be.cont_len+0.5*current_len)) ) / (hull.V_hull + self.V_be)       
+        delta_X_cb = self.X_cb - self.X_cg
+
+        self.delta_X_cb_arr.append(delta_X_cb)
+
         self.theta = np.arccos(hull.stability/np.sqrt(delta_X_cb**2 +hull.stability**2))
+
+        if(delta_X_cb >=0):
+            self.theta = np.arccos(hull.stability/np.sqrt(delta_X_cb**2 +hull.stability**2))
+        else:
+            self.theta = -np.arccos(hull.stability/np.sqrt(delta_X_cb**2 +hull.stability**2))
+
+        self.theta_arr.append((180/np.pi)*self.theta)
 
         """debug print statements"""
         #print("theta: ", self.theta)
+        #print("theta: ",(180/np.pi)*self.theta," phi: ",(180/np.pi)*self.phi)
 
     """
     method: calc coeff lift
@@ -227,7 +248,7 @@ class SeagliderFSM:
     Updates: self.lift_coeff to access aspect ratio
     """
     def calc_coeff_lift(self, hydrofoil):
-        self.lift_coeff = 0.73 * (np.pi*np.sin(self.theta))/(1+2/hydrofoil.AR)+ (2*np.pi*np.sin(self.theta)**2)/(np.pi+4)
+        self.lift_coeff = 0.73 * (np.pi*np.sin(self.aoa))/(1+2/hydrofoil.AR)+ (2*np.pi*np.sin(self.aoa)**2)/(np.pi+4)
 
         """debug print statements"""
         #print(self.lift_coeff)
@@ -277,7 +298,20 @@ class SeagliderFSM:
         self.x_disp_arr.append(self.x_disp_arr[-1] + np.trapz(y=self.x_vel_arr[-2:],dx=TIMESTEP))
 
         #iterate
-        self.i+=1            
+        self.i+=1 
+
+        #now we have solved new velocity, so we can solve new phi
+
+        self.aoa = self.phi-self.theta
+
+        if(self.x_vel_arr[-1] == 0):
+            self.phi = -0.5*np.pi
+        else:
+            self.phi = np.arctan(self.y_vel_arr[-1]/self.x_vel_arr[-1])
+
+        self.aoa_arr.append((180/np.pi)*self.aoa)
+        self.phi_arr.append((180/np.pi)*self.phi)
+
 
         """debug print statements"""
         #print(self.F_x/m_glider, self.y_accel_arr[-1])
@@ -293,8 +327,9 @@ class SeagliderFSM:
         #print(self.F_y, " | ",self.y_accel_arr[-2],self.y_accel_arr[-1])
         #print("velo: ", (self.x_vel_arr[-1]**2 + self.y_vel_arr[-1]**2)**0.5, "x velo: ", self.x_vel_arr[-1], "y velo: ",self.y_vel_arr[-1], "THETA: ", (180/np.pi)*self.theta )
         #print("\n")
-        #print("THETA: ", (180/np.pi)*self.theta, "PHI: ", (180/np.pi)*np.arctan(self.y_vel_arr[-1]/self.x_vel_arr[-1]))
-        
+        print("THETA: ", f"{(180/np.pi)*self.theta:.5f}", "PHI: ", f"{(180/np.pi)*self.phi:.5f}", "AOA: ", f"{(180/np.pi)*self.aoa:.5f}")
+        print( "v_x: ", self.x_vel_arr[-1], "v_y: ", self.y_vel_arr[-1])
+        print("\n")
 
 
 
@@ -394,7 +429,7 @@ class SeagliderFSM:
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
 
             print("state entering: move down deccel", self.x_accel_arr[-1], self.F_y)
-            self.current_state = 'move_down_deccel'
+            self.current_state = 'end'
 
 
 
@@ -474,7 +509,7 @@ class SeagliderFSM:
             self.current_state = 'end'
             
 
-
+#NOTE: HERE
             """
             state: move_down_accel
             previous state: move_up_deccel   next state: hold_be_pos_down
@@ -501,15 +536,15 @@ class SeagliderFSM:
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
-                #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", self.L*np.cos(self.theta), "y drag", self.D*np.sin(self.theta))
+                print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_hull + self.V_be):.5f}", "Fg: ",f"{-m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(self.theta):.5f}", "y drag", f"{self.D*np.sin(self.theta):.5f}")
+                print("Fx: ", self.F_x,"x lift: ", self.L*np.sin(self.theta), "x drag: ", self.D*np.cos(self.theta))
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
                 #print("LIFT: ", self.L, self.x_vel_arr[-1], self.y_vel_arr[-1]**2)
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
-
             print("state entering: hold_be_pos_down", self.x_disp_arr[-1])
-            self.current_state = 'hold_be_pos_down'
+            self.current_state = 'end'
             
 
 
@@ -755,7 +790,7 @@ plt.show()
 
 #uncomment for big data
 
-plt.subplot(2,6,1)  
+plt.subplot(2,8,1)  
 plt.plot(seapup.x_disp_arr, seapup.y_disp_arr, label='Seaglider Position', color='blue')
 plt.xlabel('X-Pos (m)')
 plt.ylabel('Y-Pos (m)')
@@ -767,60 +802,81 @@ for i in seapup.s_x_change_up_arr:
     plt.axvline(x=i, color='g', linestyle='-', label='change up')
 """
 
-plt.subplot(2,6,2)
+plt.subplot(2,8,2)
 plt.plot(seapup.x_disp_arr, seapup.time_arr, label='X-Pos Vs Time', color='blue')
 plt.ylabel('Time (s)')
 plt.xlabel('X-Pos (m)')
 
-plt.subplot(2,6,3)
+plt.subplot(2,8,3)
 plt.plot(seapup.time_arr, seapup.y_disp_arr, label='Time Vs Y-Pos', color='blue')
 plt.xlabel('Time (s)')
 plt.ylabel('Y-Pos (m)')
 
-plt.subplot(2,6,4)
+plt.subplot(2,8,4)
 plt.plot(seapup.time_arr, seapup.x_vel_arr, label='Time Vs X-Vel', color='blue')
 plt.xlabel('Time (s)')
 plt.ylabel('X-Vel (m/s)')
 
-plt.subplot(2,6,5)
+plt.subplot(2,8,5)
 plt.plot(seapup.time_arr, seapup.y_vel_arr, label='Time Vs Y-Vel', color='blue')
 plt.xlabel('Time (s)')
 plt.ylabel('Y-Vel (m/s)')
 
-plt.subplot(2,6,6)
+plt.subplot(2,8,6)
 plt.plot(seapup.time_arr, seapup.x_accel_arr, label='Time Vs X-Accel', color='blue')
 plt.xlabel('Time (s)')
 plt.ylabel('X-Accel (m/s^2)')
 
-plt.subplot(2,6,7)
+plt.subplot(2,8,7)
 plt.plot(seapup.time_arr, seapup.y_accel_arr, label='Time Vs Y-Accel', color='blue')
 plt.xlabel('Time (s)')
 plt.ylabel('Y-Accel (m/s^2)')
 
-plt.subplot(2,6,8)
+plt.subplot(2,8,8)
 plt.plot(seapup.x_disp_arr, seapup.be_pos_arr, label='X-Pos Vs BE Position ', color='blue')
 plt.ylabel('B.E. Pos (in)')
 plt.xlabel('X-Pos (m)')
 
-plt.subplot(2,6,9)
+plt.subplot(2,8,9)
 plt.plot(seapup.be_pos_arr, seapup.x_accel_arr, label='BE Position Vs x-Accel', color='blue')
 plt.xlabel('B.E. Pos (in)')
 plt.ylabel('X-accel (m/s^2)')
 
-plt.subplot(2,6,10)
+plt.subplot(2,8,10)
 plt.plot(seapup.be_pos_arr, seapup.y_vel_arr, label='BE Position Vs Y-Vel', color='blue')
 plt.xlabel('B.E. Pos (in)')
 plt.ylabel('Y-Vel (m/s)')
 
-plt.subplot(2,6,11)
+plt.subplot(2,8,11)
 plt.plot(seapup.be_pos_arr, seapup.y_accel_arr, label='BE Position Vs Y-accel', color='blue')
 plt.xlabel('B.E. Pos (in)')
 plt.ylabel('Y-Accel (m/s^2)')
 
-plt.subplot(2,6,12)
+plt.subplot(2,8,12)
 plt.plot(seapup.time_arr, seapup.be_pos_arr, label='Time Vs BE Position', color='blue')
 plt.xlabel('Time (S)')
 plt.ylabel('B.E. Pos (in)')
+
+plt.subplot(2,8,13)
+plt.plot(seapup.time_arr, seapup.aoa_arr, label='Time Vs aoa (deg)', color='blue')
+plt.xlabel('Time (S)')
+plt.ylabel('aoa (deg)')
+
+plt.subplot(2,8,14)
+plt.plot(seapup.time_arr, seapup.phi_arr, label='Time Vs phi (deg)', color='blue')
+plt.xlabel('Time (S)')
+plt.ylabel('phi (deg)')
+
+plt.subplot(2,8,15)
+plt.plot(seapup.time_arr, seapup.theta_arr, label='Time Vs theta (deg)', color='blue')
+plt.xlabel('Time (S)')
+plt.ylabel('theta (deg)')
+
+plt.subplot(2,8,16)
+plt.plot(seapup.time_arr, seapup.delta_X_cb_arr, label='Time Vs delta cb (m)', color='blue')
+plt.xlabel('Time (S)')
+plt.ylabel('delta X_cb (m)')
+
 
 
 plt.show()
