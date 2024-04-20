@@ -651,7 +651,6 @@ the second loop(s) run the trajectory
 ####inputs/setup:
 hydrofoil = Hydrofoil(3, 12) # aspect ratio and span (in inches)
 
-drag_coeff = 0 #estimated from hull outer geometry ss
 percent_stability = 0.15 #% diam
 midpoint = intometer(4)
 internal_mass = 11 #kg
@@ -686,7 +685,7 @@ start_time_hold_up = 4 #s
 nom_dist_to_retract = intometer(0) #m
 nom_time_hold_down = 4 #s
 nom_dist_to_extend = intometer(8) #m
-nom_time_hold_up = 1000000000 #s
+nom_time_hold_up = 4 #s
 
 
 
@@ -718,9 +717,9 @@ while(sim_depth > max_allowable_depth):
     
     #normal yo
     
-    for i in range(1):
+    for i in range(5):
         seapup.set_state('move_down_accel')
-        while(seapup.get_state() != 'hold_be_pos_up'):
+        while(seapup.get_state() != 'end'):
             #def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up)
             seapup.trajectory(nom_dist_to_retract, nom_time_hold_down, nom_dist_to_extend, nom_time_hold_up)
 
