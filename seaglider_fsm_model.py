@@ -217,6 +217,7 @@ class SeagliderFSM:
     def calc_theta(self, current_len, V_be):
         self.X_cb = ( (hull.V_hull*0.5*hull.l_hull) + (be.V_cont*(hull.l_hull+0.5*be.cont_len)) + ((self.V_be-be.V_cont)*(hull.l_hull+be.cont_len+0.5*current_len)) ) / (hull.V_hull + self.V_be)       
         delta_X_cb = self.X_cb - self.X_cg
+        print(self.X_cb)
 
         self.delta_X_cb_arr.append(delta_X_cb)
 
@@ -359,9 +360,6 @@ class SeagliderFSM:
         self.time_hold_down = time_hold_down
         self.dist_to_extend = dist_to_extend
         self.time_hold_up = time_hold_up
-        print(time_hold_up)
-
-        print("start trajectory", self.current_state)
 
 
 
@@ -381,13 +379,8 @@ class SeagliderFSM:
 
                 self.V_be = be.V_cont + (0.25*np.pi*be.id**2)*self.current_len
                 self.calc_hydro_force(self.current_len, self.V_be, self.hydrofoil)
-                """
-                self.F_y = RHO_WATER*GRAVITY*(hull.V_hull + self.V_be ) - m_glider*GRAVITY + self.L*np.cos(np.abs(self.phi)) + self.D*np.sin(np.abs(self.phi))
-                self.F_x = self.L*np.sin(np.abs(self.phi)) - self.D*np.cos(np.abs(self.phi))
-                """
-                #print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_hull + self.V_be):.5f}", "Fg: ",f"{-m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{self.D*np.sin(np.abs(self.phi)):.5f}")
-                #print("Fx: ", self.F_x,"x lift: ", self.L*np.sin(np.abs(self.phi)), "x drag: ", self.D*np.cos(np.abs(self.phi)))
 
+                
                 self.kinematics()
 
                 #iterate self.current_len
@@ -402,6 +395,9 @@ class SeagliderFSM:
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
                 #print("LIFT: ", self.L, self.x_vel_arr[-1], self.y_vel_arr[-1]**2)
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
+                #print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_hull + self.V_be):.5f}", "Fg: ",f"{-m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{self.D*np.sin(np.abs(self.phi)):.5f}")
+                #print("Fx: ", self.F_x,"x lift: ", self.L*np.sin(np.abs(self.phi)), "x drag: ", self.D*np.cos(np.abs(self.phi)))
+
             print("state entering: hold_be_pos_down", self.x_disp_arr[-1])
             self.current_state = 'hold_be_pos_down'
             
@@ -416,12 +412,10 @@ class SeagliderFSM:
             Appends: buoyancy engine position and time
             """
         elif self.current_state == 'hold_be_pos_up':
-
             print("state: hold be pos", "F_y: ", self.F_y, "current_len: ", self.current_len)
-            print("holding time UP!!! (s): ", self.time_hold_up)
-            
-            current_time = 0
             print("holding time up (s): ", self.time_hold_up)
+
+            current_time = 0
 
             while current_time < self.time_hold_up:
 
@@ -456,8 +450,9 @@ class SeagliderFSM:
             """
         elif self.current_state == 'hold_be_pos_down':
             print("state: hold be pos", "F_y: ", self.F_y, "current_len: ", self.current_len)
-            current_time = 0
             print("holding time down (s): ", self.time_hold_down)
+
+            current_time = 0
 
             while current_time < self.time_hold_down:
 
@@ -495,10 +490,7 @@ class SeagliderFSM:
 
                 self.V_be = be.V_cont + (0.25*np.pi*be.id**2)*self.current_len
                 self.calc_hydro_force(self.current_len, self.V_be, self.hydrofoil)
-                """
-                self.F_y = RHO_WATER*GRAVITY*(hull.V_hull + self.V_be ) - m_glider*GRAVITY + self.L*np.cos(np.abs(self.phi)) + self.D*np.sin(np.abs(self.phi))
-                self.F_x = self.L*np.sin(np.abs(self.phi)) - self.D*np.cos(np.abs(self.phi))            
-                """
+
                 self.kinematics()
 
                 #iterate current_len
@@ -532,11 +524,6 @@ class SeagliderFSM:
             while self.current_len < dist_to_extend:
                 
                 self.V_be = be.V_cont + (0.25*np.pi*be.id**2)*self.current_len
-                
-                """
-                self.F_y = RHO_WATER*GRAVITY*(hull.V_hull + self.V_be ) - m_glider*GRAVITY - self.L*np.cos(self.theta) - self.D*np.sin(self.theta)
-                self.F_x = self.L*np.sin(self.theta) - self.D*np.cos(self.theta)
-                """
                 self.kinematics()
 
                 self.calc_hydro_force(self.current_len, self.V_be, self.hydrofoil)
@@ -717,7 +704,7 @@ while(sim_depth > max_allowable_depth):
     
     #normal yo
     
-    for i in range(5):
+    for i in range(3):
         seapup.set_state('move_down_accel')
         while(seapup.get_state() != 'end'):
             #def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up)
@@ -758,6 +745,7 @@ print("glide period: ",glide_period, '\n')
 
 print("be id: ",39.3701*be.id, " (in)")
 print("hull id: ",39.3701*hull.id, " (in)")
+print("hull_len: ", 39.3701*hull_len, " (in)")
 print("total glider mass: ", m_glider, " (kg)")
 
 
