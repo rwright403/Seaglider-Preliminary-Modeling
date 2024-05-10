@@ -16,7 +16,7 @@ AOA_LOOKUP, C_LIFT_LOOKUP, C_DRAG_LOOKUP = zip(*AOA_C_LIFT_C_DRAG_COEFFS)
 
 
 """
-fucntion: intometer: converts a dimension from inches to meters
+function: intometer: converts a dimension from inches to meters
 input: a dimension in inches
 output: the dimension converted to meters
 """
@@ -28,11 +28,11 @@ def intometer(x):
 """
 function: linear_interpolation: 
 input: 
-output: the interpolated value for hull coeff of drag
+output: the interpolated value for glider coeff of drag and lift in degrees
 """
 def linear_interpolation(x,lookup_arr):
     y = ((180/np.pi)*x)
-    z=  np.interp(np.abs(y), AOA_LOOKUP, lookup_arr)
+    z =  np.interp(np.abs(y), AOA_LOOKUP, lookup_arr)
     #print(z)
     return z
 
@@ -43,55 +43,15 @@ def linear_interpolation(x,lookup_arr):
 """
 class: Hydrofoil
 Purpose: this class stores all the information about the hydrofoil geometry for force balance calculations
-inputs: the aspect ratio of the wing and the span (long dimension perpendicular to gliders main axis)
-atributes: 
-Aspect ratio, span (m) and wing area (m^2)
+inputs: reference area (m^2)
+
+attributes:
+all inputs
 """
 class Hydrofoil:
-    def __init__(self,AR,span):
-        self.AR = AR
-        self.span = intometer(span) #m
-        
-        self.width = self.span/self.AR #m
-
-        self.Area = 0.0128 #self.span*self.width #m^2
-        print("AREA: ", self.Area)
-
-
-
-
-
-"""
-class: BuoyancyEngine
-Purpose: [TODO: DELETE] this class stores all the information about the buoyancy engine geometry and mass for force balance calculations
-
-inputs: inner B.E. diameter, outer B.E. diameter, fully contracted length, length of travel, speed of actuator, midpoint distance from contracted point
-(input dimensions passed in in imperial, masses in kg)
-
-attributes: 
-all inputs 
-volume at the contracted length and volume when B.E. is extended to midpoint
-mass of expansion fitting (just pvc not considering linear actuator mass in this num)
-"""
-class BuoyancyEngine:
-    def __init__(self, id, od, cont_len, travel_len, laspeed, midpoint):
-        self.id = intometer(id) #m
-        self.od = intometer(od) #m
-        self.cont_len = intometer(cont_len) #m
-        self.travel_len = intometer(travel_len) #m
-        self.midpoint = midpoint #already passed in in metric!
-        self.laspeed = laspeed #m/s
-
-        print("init be: midpoint, travel len", self.midpoint, self.travel_len)
-
-        #displaced volumes
-        self.V_cont = 0.25*(np.pi*self.od**2)*self.cont_len #m^3
-        self.V_mid = 0.25*np.pi*(self.id**2)*self.midpoint + self.V_cont #m^3
-
-        self.mass = RHO_PVC*0.25*np.pi*(self.od**2-self.id**2)*self.cont_len #kg
-
-        #debug print statements
-        #print("be mass: ", self.mass)
+    def __init__(self,ref_area):
+        self.ref_area = ref_area #m^2
+        print("AREA: ", self.ref_area)
 
 
 
@@ -107,7 +67,13 @@ inputs: tank length, od tank, id tank, mass of half tank water, distance of tank
 attributes:
 all inputs
 tank volume
-mass of emtpy tank assuming aluminum construction
+mass of emtpy tank assuming aluminum construction (calculated from volume and density)
+mass of the tank for the glider to have neutral buoyancy
+full mass of the tank
+current mass of the tank NOTE: this is updated throughout the trajectory
+
+method:
+update_mass --> This updates the mass of the water tank and returns the new total glider mass.
 """
 class BallastTank:
     def __init__(self, l_tank, od_tank, id_tank, m_half_water, x_tank):
@@ -115,7 +81,7 @@ class BallastTank:
         self.od_tank = intometer(od_tank) #m
         self.id_tank = intometer(id_tank) #m
         self.m_half_water = m_half_water #kg
-        self.x_tank = intometer(x_tank) #m NOTE: this is in imperial to be consistent but dont forget that when debugging
+        self.x_tank = intometer(x_tank) #m 
 
         self.tank_volume = self.l_tank*0.25*np.pi*(self.id_tank**2)  #m^3
         self.m_empty_tank = RHO_ALU*(0.25*np.pi*( (self.od_tank**2) - (self.id_tank**2) ))*self.l_tank #kg
@@ -158,24 +124,25 @@ class TCSmicropump:
 class: PressureHull
 Purpose: this class stores all the information about the hull geometry and mass for force balance calculations
 
-inputs: P.H. id, od, length. Also percent stability, which is used to calculate the distance between the cb and cg based on hull diameter
+inputs: P.H. id, od, length, (percent stability, which is used to calculate the distance between the cb and cg based on hull diameter) and cfd ref area
 (all dimensions passed in in metric because metric used to calculate the hull length to get a neutrally buoyant glider for a given mass)
 
 attributes: 
 all inputs, 
 calculated glider stability using product of % stability and hull diam
 geometry like cross sectional area and volume
+reference area from cfd for drag coeffs
 mass of pressure hull (pvc pipe mass)
 """
 class PressureHull:
-    def __init__(self,id,od,len,stability):
+    def __init__(self,id,od,len,stability,ref_area):
         self.id = intometer(id) #m
         self.od = intometer(od) #m
         self.l_hull = intometer(len) #m
         self.stability = intometer(stability) #m
 
         self.area = 0.25*np.pi*self.od**2 #m^2
-        self.surface_area = 0.01533 #m^2 TODO:check if this is used
+        self.ref_area = ref_area #m^2 TODO:check if this is used
 
         self.x_hull = self.l_hull/2
         self.V_displacement = self.area*self.l_hull #m
@@ -187,7 +154,7 @@ class PressureHull:
 
 """
 class: MovingMass
-Purpose: stores info about remaining mass in glider, can be developed into a true moving mass later
+Purpose: stores info about remaining mass in glider (not wate tank), can be developed into a true moving mass later (might help w control system???)
 
 inputs: mass, distance of center of mass to glider tail
 (input dimensions passed in METRIC!, masses in kg)
@@ -209,8 +176,8 @@ Purpose: This is the class that calculates the seaglider trajectory. There are s
 inputs: buoyancy engine object, pressure hull object, glider mass, hydrofoil object
 
 attributes:
-the buoyancy engine, hydrofoil, pressure hull objects as well as the glider's internal mass
-arrays to store accel, velo, disp
+the water tamk,pump. moving mass, hydrofoil, pressure hull objects as well as the glider's internal mass
+arrays to store accel, velo, disp (and graph)
 
 methods:
 __init__
@@ -259,7 +226,7 @@ class SeagliderFSM:
 
         self.s_x_change_down_arr = []
         self.s_x_change_up_arr = []
-        self.be_pos_arr = [self.tank.m_current]
+        self.tank_mass_arr = [self.tank.m_current]
 
 
 
@@ -326,13 +293,13 @@ class SeagliderFSM:
 
         self.aoa = self.phi-self.theta #TODO: check this sign
 
-        self.L = 0.5*RHO_WATER*linear_interpolation(self.aoa,C_LIFT_LOOKUP)*self.hydrofoil.Area*velocity_magnitude**2
-        self.D = 0.5*RHO_WATER*linear_interpolation(self.aoa,C_DRAG_LOOKUP)*self.hull.surface_area*velocity_magnitude**2
+        self.L = 0.5*RHO_WATER*linear_interpolation(self.aoa,C_LIFT_LOOKUP)*self.hydrofoil.ref_area*velocity_magnitude**2
+        self.D = 0.5*RHO_WATER*linear_interpolation(self.aoa,C_DRAG_LOOKUP)*self.hull.ref_area*velocity_magnitude**2
 
 
         """debug print statements"""
         #print("theta: ", self.theta, "lift: ", self.L, "velo: ", (self.x_vel_arr[-1]**2 + self.y_vel_arr[-1]**2)**0.5, "net y force: ", self.F_y, "be pos: ", self.m_glider)
-        print("aoa: ",f"{(180/np.pi)*self.aoa:.2f}", "theta: ",f"{(180/np.pi)*self.theta:.2f}", "phi: ",f"{(180/np.pi)*self.phi:.2f}", "lift coeff: ", linear_interpolation(self.aoa,C_LIFT_LOOKUP), "drag coeff: ",linear_interpolation(self.aoa,C_DRAG_LOOKUP))
+        #print("aoa: ",f"{(180/np.pi)*self.aoa:.2f}", "theta: ",f"{(180/np.pi)*self.theta:.2f}", "phi: ",f"{(180/np.pi)*self.phi:.2f}", "lift coeff: ", linear_interpolation(self.aoa,C_LIFT_LOOKUP), "drag coeff: ",linear_interpolation(self.aoa,C_DRAG_LOOKUP))
 
 
     """
@@ -351,7 +318,7 @@ class SeagliderFSM:
 
         if(self.aoa < 0):
             self.F_y = RHO_WATER*GRAVITY*(self.hull.V_displacement) - self.m_glider*GRAVITY + self.L*np.cos(np.abs(self.phi)) + self.D*np.sin(np.abs(self.phi))
-            print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_displacement):.5f}", "Fg: ",f"{-self.m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{self.D*np.sin(np.abs(self.phi)):.5f}")
+            #print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_displacement):.5f}", "Fg: ",f"{-self.m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{self.D*np.sin(np.abs(self.phi)):.5f}")
         else:
             self.F_y = RHO_WATER*GRAVITY*(self.hull.V_displacement) - self.m_glider*GRAVITY - self.L*np.cos(np.abs(self.phi)) - self.D*np.sin(np.abs(self.phi))
             #print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_displacement):.5f}", "Fg: ",f"{-self.m_glider*GRAVITY:.5f}", "y lift: ", f"{-self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{-self.D*np.sin(np.abs(self.phi)):.5f}")
@@ -407,6 +374,8 @@ class SeagliderFSM:
     
     Returns: nothing
     Updates:
+    current tank mass
+    accel, velo displacement, time and tank mass arrays
     """
     def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up):
         
@@ -424,8 +393,8 @@ class SeagliderFSM:
         previous state: move_up_deccel   next state: hold_be_pos_down
 
         Returns: nothing
-        Updates: net forces F_y, F_x, buoyancy engine position (current len)
-        Appends: buoyancy engine position and time
+        Updates: net forces F_y, F_x, tank mass
+        Appends: tank mass and time
         """
         if self.current_state == 'move_down_accel':
             print("state: move down accel")
@@ -436,7 +405,7 @@ class SeagliderFSM:
                 self.calc_hydro_force()
                 self.kinematics()
 
-                self.be_pos_arr.append(self.tank.m_current)
+                self.tank_mass_arr.append(self.tank.m_current)
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
@@ -449,7 +418,7 @@ class SeagliderFSM:
                 #print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_hull + self.V_be):.5f}", "Fg: ",f"{-m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{self.D*np.sin(np.abs(self.phi)):.5f}")
                 #print("Fx: ", self.F_x,"x lift: ", self.L*np.sin(np.abs(self.phi)), "x drag: ", self.D*np.cos(np.abs(self.phi)))
 
-            print("state entering: hold_be_pos_down", self.x_disp_arr[-1])
+            print("state entering: hold_be_pos_down", self.time_arr[-1])
             self.current_state = 'hold_be_pos_down'
             
 
@@ -460,7 +429,7 @@ class SeagliderFSM:
         
             Returns: nothing
             Updates: net forces F_y, F_x
-            Appends: buoyancy engine position and time
+            Appends: tank mass and time
             """
         elif self.current_state == 'hold_be_pos_up':
             print("holding time up (s): ", self.time_hold_up)
@@ -474,7 +443,7 @@ class SeagliderFSM:
 
                 #iterate/move forward current_time
                 current_time += TIMESTEP
-                self.be_pos_arr.append(self.tank.m_current)
+                self.tank_mass_arr.append(self.tank.m_current)
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
@@ -484,7 +453,7 @@ class SeagliderFSM:
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
         
-            print("state entering: move up deccel", self.x_accel_arr[-1], self.F_y)
+            print("state entering: move up deccel", self.time_arr[-1])
             self.current_state = 'move_up_deccel'
 
 
@@ -494,8 +463,8 @@ class SeagliderFSM:
             previous state: move_down_accel    next state: move_down_deccel
         
             Returns: nothing
-            Updates: net forces F_y, F_x
-            Appends: buoyancy engine position and time
+            Updates: net forces F_y, F_x,
+            Appends: tank mass and time
             """
         elif self.current_state == 'hold_be_pos_down':
             print("holding time down (s): ", self.time_hold_down)
@@ -509,7 +478,7 @@ class SeagliderFSM:
 
                 #iterate/move forward current_time
                 current_time += TIMESTEP
-                self.be_pos_arr.append(self.tank.m_current)
+                self.tank_mass_arr.append(self.tank.m_current)
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
 
                 """debug print statements"""
@@ -518,7 +487,7 @@ class SeagliderFSM:
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
 
-            print("state entering: move down deccel", self.x_accel_arr[-1], self.F_y)
+            print("state entering: move down deccel", self.time_arr[-1])
             self.current_state = 'move_down_deccel'
 
 
@@ -529,8 +498,8 @@ class SeagliderFSM:
             previous state: hold_be_pos_up     next state: move_up_accel
 
             Returns: nothing
-            Updates: net forces F_y, F_x, buoyancy engine position (current len)
-            Appends: buoyancy engine position and time
+            Updates: net forces F_y, F_x, tank mass
+            Appends: tank mass and time
             """
         elif self.current_state == 'move_down_deccel':
             print("state: move down deccel")
@@ -542,7 +511,7 @@ class SeagliderFSM:
                 self.kinematics()
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
-                self.be_pos_arr.append(self.tank.m_current)
+                self.tank_mass_arr.append(self.tank.m_current)
 
                 """debug print statements"""
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
@@ -551,9 +520,9 @@ class SeagliderFSM:
                 #print("x lift: ", self.L*np.sin(self.theta), "x drag: ", - self.D*np.cos(self.theta))
                 #print(self.F_y, 39.3701*self.current_len)
 
-            print("state entering: move up accel", self.x_disp_arr[-1])
+            print("state entering: move up accel", self.time_arr[-1])
             self.sim_depth = self.y_disp_arr[-1]
-            print("y disp arr", self.sim_depth, self.y_disp_arr[-1])
+            #print("y disp arr", self.sim_depth, self.y_disp_arr[-1])
             self.current_state = 'move_up_accel'
     
 
@@ -564,8 +533,8 @@ class SeagliderFSM:
             previous state: move_down_deccel    next state: hold_be_pos_up
 
             Returns: nothing
-            Updates: net forces F_y, F_x, buoyancy engine position (current len)
-            Appends: buoyancy engine position and time
+            Updates: net forces F_y, F_x, tank mass
+            Appends: tank mass and time
             """
         elif self.current_state == 'move_up_accel':
             print("state: move up accel")
@@ -577,7 +546,7 @@ class SeagliderFSM:
                 self.calc_hydro_force()
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
-                self.be_pos_arr.append(self.tank.m_current)
+                self.tank_mass_arr.append(self.tank.m_current)
 
                 """debug print statements"""
                 #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
@@ -587,7 +556,7 @@ class SeagliderFSM:
                 #print("F_y (N): ", self.F_y, "y lift: ", -self.L*np.cos(self.theta), "y drag: ", -self.D*np.sin(self.theta), "Fg: ", - m_glider*GRAVITY, "Fb: ", RHO_WATER*GRAVITY*(hull.V_hull + self.V_be ), "x velo: ", self.x_vel_arr[-1])
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
 
-            print("state entering: hold_be_pos_up, ", self.x_disp_arr[-1])
+            print("state entering: hold_be_pos_up, ", self.time_arr[-1])
             self.current_state = 'hold_be_pos_up'
             print(self.current_state)
             
@@ -614,7 +583,7 @@ class SeagliderFSM:
                 self.kinematics()
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
-                self.be_pos_arr.append(self.tank.m_current)
+                self.tank_mass_arr.append(self.tank.m_current)
 
                 """debug print statements"""
                 #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
@@ -623,7 +592,7 @@ class SeagliderFSM:
                 #print("theta! ", (180/np.pi)*theta, "F_y: ", self.F_y)
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
 
-            print("state entering: end", self.x_disp_arr[-1])
+            print("state entering: end", self.time_arr[-1])
             self.current_state = 'end'
 
 
@@ -666,25 +635,21 @@ class SeagliderFSM:
 
 
 
-
-
-
-
 """
 THIS IS THE MAIN BODY OF THE CODE
-this script works under the assumption that the linear actuator in the b.e. is so fast that it can reach the endpoint before it needs to reverse to avoid crush depth
-the main unknown are the speeds to hold the b.e. We solve this ITERATIVELY. Every iteration increases the time we are holding the b.e. pos until we hold it so long the glider reaches operational depth.
+the main unknown in the trajectory is the time to hold water in the tank so we sink enough to reach our desired depth.
+We solve this ITERATIVELY. Every iteration increases the time we are holding water in the tank until we hold it so long the glider reaches operational depth.
 
 the first loop checks if the trajectory has reached max allowable depth
 the second loop(s) run the trajectory 
 """
-####glider part object inputs / setup:
-hydrofoil = Hydrofoil(3, 12) # aspect ratio and span (in inches)
 
-###INPUT DIRECTLY FROM SIZING SPREADSHEET
+
+###INPUT DIRECTLY FROM TCS MICROPUMP SIZING SPREADSHEET AND GORDON'S CFD SPREADSHEET
 tank = BallastTank(25.44135105, 1.9,  1.5, 0.75, 26.70241442)
 pump = TCSmicropump("MGD2000F")
-hull = PressureHull( 4.768, 5.563, 44.504, 1)
+hull = PressureHull( 4.768, 5.563, 44.504, 1, 0.01533)
+hydrofoil = Hydrofoil(0.0128) # reference area in m^2
 
 m_glider = RHO_WATER*hull.V_displacement
 
@@ -715,7 +680,6 @@ nom_time_hold_up = 4 #s
 while(sim_depth > max_allowable_depth):
     
     sim_depth = 0
-    #def __init__(self, be, hull, m_glider):
     seapup = SeagliderFSM(tank, pump, movingmass, hull, m_glider, hydrofoil)
 
     #TODO: DELETE WHEN SCRIPT WORKS AND NO MORE DEBUGGING
@@ -811,14 +775,14 @@ plt.show()
 
 
 plt.subplot(1,3,2)
-plt.plot(seapup.x_disp_arr, seapup.be_pos_arr, label='BE Position Over X-Pos', color='blue')
+plt.plot(seapup.x_disp_arr, seapup.tank_mass_arr, label='BE Position Over X-Pos', color='blue')
 plt.xlabel('X-Pos (m)')
 plt.ylabel('B.E. Pos (in)')
 
 
 
 plt.subplot(1,3,3)
-plt.plot(seapup.time_arr, seapup.be_pos_arr, label='BE Position Over X-Pos', color='blue')
+plt.plot(seapup.time_arr, seapup.tank_mass_arr, label='BE Position Over X-Pos', color='blue')
 plt.xlabel('Time (s)')
 plt.ylabel('B.E. Pos (in)')
 
@@ -871,27 +835,27 @@ plt.xlabel('Time (s)')
 plt.ylabel('Y-Accel (m/s^2)')
 
 plt.subplot(2,8,8)
-plt.plot(seapup.x_disp_arr, seapup.be_pos_arr, label='X-Pos Vs BE Position ', color='blue')
+plt.plot(seapup.x_disp_arr, seapup.tank_mass_arr, label='X-Pos Vs BE Position ', color='blue')
 plt.ylabel('Tank Mas (kg)')
 plt.xlabel('X-Pos (m)')
 
 plt.subplot(2,8,9)
-plt.plot(seapup.be_pos_arr, seapup.x_accel_arr, label='BE Position Vs x-Accel', color='blue')
+plt.plot(seapup.tank_mass_arr, seapup.x_accel_arr, label='BE Position Vs x-Accel', color='blue')
 plt.xlabel('Tank Mas (kg)')
 plt.ylabel('X-accel (m/s^2)')
 
 plt.subplot(2,8,10)
-plt.plot(seapup.be_pos_arr, seapup.y_vel_arr, label='BE Position Vs Y-Vel', color='blue')
+plt.plot(seapup.tank_mass_arr, seapup.y_vel_arr, label='BE Position Vs Y-Vel', color='blue')
 plt.xlabel('Tank Mas (kg)')
 plt.ylabel('Y-Vel (m/s)')
 
 plt.subplot(2,8,11)
-plt.plot(seapup.be_pos_arr, seapup.y_accel_arr, label='BE Position Vs Y-accel', color='blue')
+plt.plot(seapup.tank_mass_arr, seapup.y_accel_arr, label='BE Position Vs Y-accel', color='blue')
 plt.xlabel('Tank Mas (kg)')
 plt.ylabel('Y-Accel (m/s^2)')
 
 plt.subplot(2,8,12)
-plt.plot(seapup.time_arr, seapup.be_pos_arr, label='Time Vs BE Position', color='blue')
+plt.plot(seapup.time_arr, seapup.tank_mass_arr, label='Time Vs BE Position', color='blue')
 plt.xlabel('Time (S)')
 plt.ylabel('Tank Mas (kg)')
 
@@ -913,8 +877,6 @@ plt.ylabel('theta (deg)')
 plt.subplot(2,8,16)
 plt.plot(seapup.time_arr, seapup.delta_X_cg_arr, label='Time Vs delta cb (m)', color='blue')
 plt.xlabel('Time (S)')
-plt.ylabel('delta X_cb (m)')
-
-
+plt.ylabel('delta X_cg (m)')
 
 plt.show()
