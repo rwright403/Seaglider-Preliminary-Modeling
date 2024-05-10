@@ -7,7 +7,7 @@ RHO_PVC = 1380 #kg/m^3
 RHO_WATER = 997 #kg/m^3
 RHO_ALU = 2710 #kg/m^3
 GRAVITY = 9.81 #m/s^2
-TIMESTEP = 0.5 #s
+TIMESTEP = 0.1 #s
 
 AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0),(10,0.60129,0.16156),(20,1.10264,0.41936),(30,1.68006,0.86424),(40,2.34058,1.62498),(50,2.71196,2.56013),(60,2.61962,3.44442),(70,2.03519,4.06102),(80,1.15359,4.41248),(90,0.04466,4.43128)]
 
@@ -377,11 +377,9 @@ class SeagliderFSM:
     current tank mass
     accel, velo displacement, time and tank mass arrays
     """
-    def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up):
+    def trajectory(self,time_hold_down, time_hold_up):
         
-        self.dist_to_retract = dist_to_retract
         self.time_hold_down = time_hold_down
-        self.dist_to_extend = dist_to_extend
         self.time_hold_up = time_hold_up
 
 
@@ -417,7 +415,7 @@ class SeagliderFSM:
                 #print("theta! ", (180/np.pi)*self.theta, "F_y: ", self.F_y)
                 #print("Fy: ", f"{self.F_y:.5f}", "Fb: ", f"{RHO_WATER*GRAVITY*(hull.V_hull + self.V_be):.5f}", "Fg: ",f"{-m_glider*GRAVITY:.5f}", "y lift: ", f"{self.L*np.cos(np.abs(self.phi)):.5f}", "y drag", f"{self.D*np.sin(np.abs(self.phi)):.5f}")
                 #print("Fx: ", self.F_x,"x lift: ", self.L*np.sin(np.abs(self.phi)), "x drag: ", self.D*np.cos(np.abs(self.phi)))
-
+            
             print("state entering: hold_be_pos_down", self.time_arr[-1])
             self.current_state = 'hold_be_pos_down'
             
@@ -506,7 +504,7 @@ class SeagliderFSM:
             while self.tank.m_current > tank.m_neutral_buoy:
 
                 self.m_glider = self.tank.update_mass(-self.delta_water_mass, self.m_glider)
-
+                
                 self.calc_hydro_force()
                 self.kinematics()
 
@@ -541,9 +539,9 @@ class SeagliderFSM:
             while self.tank.m_current > self.tank.m_empty_tank:
                 
                 self.m_glider = self.tank.update_mass(-self.delta_water_mass, self.m_glider)
-                self.kinematics()
 
                 self.calc_hydro_force()
+                self.kinematics()
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
                 self.tank_mass_arr.append(self.tank.m_current)
@@ -579,6 +577,7 @@ class SeagliderFSM:
             while self.tank.m_current < self.tank.m_neutral_buoy:
 
                 self.m_glider = self.tank.update_mass(self.delta_water_mass, self.m_glider)
+
                 self.calc_hydro_force()
                 self.kinematics()
 
@@ -663,15 +662,12 @@ max_allowable_depth = -50 #m
 sim_depth = 0 #m
 
 #setup trajectory parameters --> either distance to go to or times to hold down
-start_dist_to_retract = intometer(0) #m
 start_time_hold_down = 4 #s
-start_dist_to_extend = intometer(8) #m
 start_time_hold_up = 4 #s
 
 
-nom_dist_to_retract = intometer(0) #m
+
 nom_time_hold_down = 4 #s
-nom_dist_to_extend = intometer(8) #m
 nom_time_hold_up = 4 #s
 
 
@@ -689,8 +685,7 @@ while(sim_depth > max_allowable_depth):
 
     ###loop through fsm, #starting from surface with no speed for first run, second run we already have speed and are gliding normally
     while(seapup.get_state() != 'end'):
-        #def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up)
-        seapup.trajectory(start_dist_to_retract, start_time_hold_down, start_dist_to_extend, start_time_hold_up)
+        seapup.trajectory(start_time_hold_down, start_time_hold_up)
         sim_depth = seapup.sim_depth
 
 
@@ -700,27 +695,24 @@ while(sim_depth > max_allowable_depth):
 
     
     #normal yo
-    
+    """
     for i in range(1):
         seapup.set_state('move_down_accel')
         while(seapup.get_state() != 'end'):
-            #def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up)
-            seapup.trajectory(nom_dist_to_retract, nom_time_hold_down, nom_dist_to_extend, nom_time_hold_up)
+            seapup.trajectory(nom_time_hold_down, nom_time_hold_up)
 
         #TODO: REMOVE AFTER DEBUGGING
-
+    """
 
     """
-    #note the following breaks it, am i not sensitive enough with the inputs??? its weird because it seems nom at first then some error randomly appears
-
     print(' ')
     print("split", seapup.x_disp_arr[-1])
     print(' ')
 
     seapup.set_state('move_down_accel')
     while(seapup.get_state() != 'end'):
-        #def trajectory(self, dist_to_retract, time_hold_down, dist_to_extend, time_hold_up)
-        seapup.trajectory(nom_dist_to_retract, nom_time_hold_down, nom_dist_to_extend, nom_time_hold_up)
+        #def trajectory(self, time_hold_down, time_hold_up)
+        seapup.trajectory(nom_time_hold_down, nom_time_hold_up)
     """
 
     #iterate and reset variables
