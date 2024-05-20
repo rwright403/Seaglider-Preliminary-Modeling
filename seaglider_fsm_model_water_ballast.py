@@ -7,9 +7,14 @@ RHO_PVC = 1380 #kg/m^3
 RHO_WATER = 997 #kg/m^3
 RHO_ALU = 2710 #kg/m^3
 GRAVITY = 9.81 #m/s^2
-TIMESTEP = 0.1 #s
+TIMESTEP = 0.05 #s
 
-AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0),(10,0.60129,0.16156),(20,1.10264,0.41936),(30,1.68006,0.86424),(40,2.34058,1.62498),(50,2.71196,2.56013),(60,2.61962,3.44442),(70,2.03519,4.06102),(80,1.15359,4.41248),(90,0.04466,4.43128)]
+
+#NOTE: 5.5" coeff
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0),(10,0.60129,0.16156),(20,1.10264,0.41936),(30,1.68006,0.86424),(40,2.34058,1.62498),(50,2.71196,2.56013),(60,2.61962,3.44442),(70,2.03519,4.06102),(80,1.15359,4.41248),(90,0.04466,4.43128)]
+
+#NOTE: 6.5" coeff
+AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0), (10, 0.47065, 0.24784), (20, 0.77197, 0.63375), (30, 0.97673, 1.18142), (40, 1.25308, 2.16376), (50, 1.34133, 3.32275), (60, 1.21608, 4.20147), (70, 0.96354, 4.79311), (80, 0.59499, 5.14988), (90, 0.12408, 5.29619)]
 
 AOA_LOOKUP, C_LIFT_LOOKUP, C_DRAG_LOOKUP = zip(*AOA_C_LIFT_C_DRAG_COEFFS)
 
@@ -142,7 +147,7 @@ class PressureHull:
         self.stability = intometer(stability) #m
 
         self.area = 0.25*np.pi*self.od**2 #m^2
-        self.ref_area = ref_area #m^2 TODO:check if this is used
+        self.ref_area = ref_area #m^2 
 
         self.x_hull = self.l_hull/2
         self.V_displacement = self.area*self.l_hull #m
@@ -381,10 +386,6 @@ class SeagliderFSM:
         
         self.time_hold_down = time_hold_down
         self.time_hold_up = time_hold_up
-
-
-
-
 
         """
         state: move_down_accel
@@ -645,12 +646,13 @@ the second loop(s) run the trajectory
 
 
 ###INPUT DIRECTLY FROM TCS MICROPUMP SIZING SPREADSHEET AND GORDON'S CFD SPREADSHEET
-tank = BallastTank(25.44135105, 1.9,  1.5, 0.75, 26.70241442)
+tank = BallastTank(25.89929537, 4.5,  4, 0.75, 28.346472)
 pump = TCSmicropump("MGD2000F")
-hull = PressureHull( 4.768, 5.563, 44.504, 1, 0.01533)
-hydrofoil = Hydrofoil(0.0128) # reference area in m^2
+hull = PressureHull( 5.709, 6.625, 36.4375, 1, 0.02227)
+hydrofoil = Hydrofoil(0.04645) # reference area in m^2
 
 m_glider = RHO_WATER*hull.V_displacement
+print(m_glider)
 
 m_int = m_glider-( tank.m_neutral_buoy + hull.mass )
 x_int = ( hull.x_hull*(m_glider-hull.mass)-tank.x_tank*(tank.m_neutral_buoy) )/ m_int
@@ -662,13 +664,13 @@ max_allowable_depth = -50 #m
 sim_depth = 0 #m
 
 #setup trajectory parameters --> either distance to go to or times to hold down
-start_time_hold_down = 4 #s
-start_time_hold_up = 4 #s
+start_time_hold_down = 0 #s
+start_time_hold_up = 0 #s
 
 
 
-nom_time_hold_down = 4 #s
-nom_time_hold_up = 4 #s
+nom_time_hold_down = 0 #s
+nom_time_hold_up = 0 #s
 
 
 
@@ -696,7 +698,7 @@ while(sim_depth > max_allowable_depth):
     
     #normal yo
     """
-    for i in range(1):
+    for i in range(2):
         seapup.set_state('move_down_accel')
         while(seapup.get_state() != 'end'):
             seapup.trajectory(nom_time_hold_down, nom_time_hold_up)
@@ -725,20 +727,16 @@ while(sim_depth > max_allowable_depth):
     #NOTE: DONT FORGET THIS WHEN DEBUGGING
     break
 
-"""
+
 sim_depth = np.min(seapup.y_disp_arr)
 max_speed = np.max(seapup.x_vel_arr)
 glide_period = seapup.x_disp_arr[-1]
 
 #print a summary of noteworthy params
 print("max fwd speed: ",max_speed, " (m/s)")
-print("glide period: ",glide_period, '\n')
+print("glide period: ",glide_period, '(m)')
 
-print("be id: ",39.3701*be.id, " (in)")
-print("hull id: ",39.3701*hull.id, " (in)")
-print("hull_len: ", 39.3701*hull_len, " (in)")
-print("total glider mass: ", m_glider, " (kg)")
-"""
+
 
 
 
