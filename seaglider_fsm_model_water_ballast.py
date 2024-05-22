@@ -13,8 +13,11 @@ TIMESTEP = 0.05 #s
 #NOTE: 5.5" coeff
 #AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0),(10,0.60129,0.16156),(20,1.10264,0.41936),(30,1.68006,0.86424),(40,2.34058,1.62498),(50,2.71196,2.56013),(60,2.61962,3.44442),(70,2.03519,4.06102),(80,1.15359,4.41248),(90,0.04466,4.43128)]
 
-#NOTE: 6.5" coeff
-AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.24706), (5,0.47325,0.24706),(6,0.58687,0.28258),(7,0.68750,0.33043),(8,0.80093,0.38927),(9,0.87683,0.44002), (10, 0.94299, 0.49665), (20, 1.54980, 1.27434), (30, 1.95185, 2.36303), (40, 2.51240, 4.30686), (50, 2.63414, 6.50145), (60, 2.37985, 8.26065), (70, 1.89910, 9.46540), (80, 1.18443, 10.20209), (90, 0.23444, 10.48894)]
+#NOTE: 6.5" coeff w 18" wetted area
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.8744, 0.63502), (20, 1.31262, 1.68018), (30, 1.59276, 2.91821), (40, 1.86567, 4.92178), (50, 2.01134, 7.52057), (60, 1.80005, 9.36923), (70, 1.38445, 10.70453), (80, 0.86694, 11.76384), (90, 0.02080, 12.05325)]
+
+#NOTE: 6.5" coeff w 24" wetted area
+AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.8744, 0.63502), (20, 1.31262, 1.68018), (30, 1.59276, 2.91821), (40, 1.86567, 4.92178), (50, 2.01134, 7.52057), (60, 1.80005, 9.36923), (70, 1.38445, 10.70453), (80, 0.86694, 11.76384), (90, 0.02080, 12.05325)]
 
 AOA_LOOKUP, C_LIFT_LOOKUP, C_DRAG_LOOKUP = zip(*AOA_C_LIFT_C_DRAG_COEFFS)
 
@@ -649,7 +652,7 @@ the second loop(s) run the trajectory
 tank = BallastTank(25.89929537, 4.5,  4, 0.75, 28.346472)
 pump = TCSmicropump("MGD2000F")
 hull = PressureHull( 5.709, 6.625, 36.4375, 1, 0.02227)
-hydrofoil = Hydrofoil(0.04645) # reference area in m^2
+hydrofoil = Hydrofoil(0.06968) # reference area in m^2
 
 m_glider = RHO_WATER*hull.V_displacement
 print(m_glider)
@@ -697,13 +700,14 @@ while(sim_depth > max_allowable_depth):
 
     
     #normal yo
+    """
     for i in range(2):
         seapup.set_state('move_down_accel')
         while(seapup.get_state() != 'end'):
             seapup.trajectory(nom_time_hold_down, nom_time_hold_up)
 
         #TODO: REMOVE AFTER DEBUGGING
-
+    """
 
     """
     print(' ')
