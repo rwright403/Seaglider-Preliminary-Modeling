@@ -9,19 +9,37 @@ RHO_ALU = 2710 #kg/m^3
 GRAVITY = 9.81 #m/s^2
 TIMESTEP = 0.05 #s
 
+#shoutout Gordon for the CFD:
 
-#NOTE: 5.5" coeff
-#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0),(10,0.60129,0.16156),(20,1.10264,0.41936),(30,1.68006,0.86424),(40,2.34058,1.62498),(50,2.71196,2.56013),(60,2.61962,3.44442),(70,2.03519,4.06102),(80,1.15359,4.41248),(90,0.04466,4.43128)]
+#NOTE: 5.5" coeff w 18" span and 6" chord, ref area = 0.04645
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13),(10,0.85878,0.63899),(20,1.54002,1.83378),(30,1.98129,3.52044),(40,2.35589,5.97242),(50,2.40754,8.53947),(60,2.15846,10.77633),(70,1.60888,12.13727),(80,0.92049,12.92535),(90,0.06896,12.88577)]
 
-#NOTE: 6.5" coeff w 18" wetted area
+#NOTE: 5.5" coeff w 24" span and 6" chord, ref area = 0.06968
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13),(10,0.84707,0.86647),(20,1.31273,2.29639),(30,1.54297,4.12338),(40,1.78741,6.86500),(50,1.85246,9.98035),(60,1.68592,12.66979),(70,1.22055,13.87289),(80,0.70665,14.71333),(90,0.07437,14.08079)]
+
+#NOTE: 5.5" coeff w 30" span and 6" chord, ref area = 0.09290
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13),(10,0.85814,1.10505),(20,1.23425,2.86439),(30,1.34971,4.82341),(40,1.56994,8.04011),(50,1.63296,11.76765),(60,1.46969,14.83684),(70,1.06654,16.51409),(80,0.59907,17.26513),(90,0.05228,16.47775)]
+
+#NOTE: 5.5" coeff w 36" span and 6" chord, ref area = 0.13935
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13),(10,0.84439,1.55911),(20,1.08624,3.76454),(30,1.19478,6.43196),(40,1.38208,10.70247),(50,1.38013,14.96524),(60,1.16183,17.89040),(70,0.85811,20.39942),(80,0.47292,21.55062),(90,0.04848,21.55062)]
+
+
+#NOTE: 6.5" coeff w 18" span and 6" chord, ref area = 0.04645
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.94299, 0.49665), (20, 1.54980, 1.27434), (30, 1.95185, 2.36303), (40, 2.51240, 4.30686), (50, 2.63414, 6.50145), (60, 2.37985, 8.26065), (70, 1.89910, 9.46540), (80, 1.18443, 10.20209), (90, 0.23444, 10.48894)]
+
+#NOTE: 6.5" coeff w 24" span and 6" chord, ref area = 0.06968
 #AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.8744, 0.63502), (20, 1.31262, 1.68018), (30, 1.59276, 2.91821), (40, 1.86567, 4.92178), (50, 2.01134, 7.52057), (60, 1.80005, 9.36923), (70, 1.38445, 10.70453), (80, 0.86694, 11.76384), (90, 0.02080, 12.05325)]
 
-#NOTE: 6.5" coeff w 24" wetted area
-AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.8744, 0.63502), (20, 1.31262, 1.68018), (30, 1.59276, 2.91821), (40, 1.86567, 4.92178), (50, 2.01134, 7.52057), (60, 1.80005, 9.36923), (70, 1.38445, 10.70453), (80, 0.86694, 11.76384), (90, 0.02080, 12.05325)]
+#NOTE: 6.5" coeff w 30" span and 6" chord, ref area = 0.09290
+#AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.83857, 0.77637), (20, 1.20674, 1.95350), (30, 1.42181, 3.49277), (40, 1.63894, 5.80775), (50, 1.72969, 8.61819), (60, 1.52962, 10.68012), (70, 1.16536, 12.27118), (80, 0.67973, 12.95045), (90, 0.03188, 13.34090)]
+
+#NOTE: 6.5" coeff w 36" span and 6" chord, ref area = 0.13935
+AOA_C_LIFT_C_DRAG_COEFFS = [(0,0,0.13), (10, 0.82484, 1.07773), (20, 1.10720, 2.66590), (30, 1.28983, 4.76933), (40, 1.45487, 7.76468), (50, 1.45453, 10.91438), (60, 1.32636, 14.07559), (70, 0.99248, 15.87808), (80, 0.55020, 16.74901), (90, 0.2604, 17.14416)]
+
+
+#Remember to change the reference area below :)
 
 AOA_LOOKUP, C_LIFT_LOOKUP, C_DRAG_LOOKUP = zip(*AOA_C_LIFT_C_DRAG_COEFFS)
-
-
 
 """
 function: intometer: converts a dimension from inches to meters
@@ -31,21 +49,13 @@ output: the dimension converted to meters
 def intometer(x):
     return 0.0254*x
 
-
-
 """
-function: linear_interpolation: 
-input: 
-output: the interpolated value for glider coeff of drag and lift in degrees
+function: depth_to_bar: estimates pressure from depth
+input: a depth in meters
+output: the approximate pressure in bar
 """
-def linear_interpolation(x,lookup_arr):
-    y = ((180/np.pi)*x)
-    z =  np.interp(np.abs(y), AOA_LOOKUP, lookup_arr)
-    #print(z)
-    return z
-
-
-
+def depth_to_bar(x):
+    return np.abs(x/10)
 
 
 """
@@ -118,6 +128,10 @@ for each respective pump:
 class TCSmicropump:
     def __init__(self, name):
 
+        #NOTE: for the MGD2000F (added a while after we selected it)
+        self.pump_power_arr = [32,50,90,115] #power in watts
+        self.pump_pressure_arr = [0,2,4,6] #pressure in bar
+
         if(name == "MGD3000F"):
             self.q = 0.00005833333333
         elif(name == "MGD3000S"):
@@ -125,7 +139,7 @@ class TCSmicropump:
         elif(name == "MGD2000F"):
             self.q = 0.00003833333333
         elif(name == "MGD1000F"):
-            self.q = 0.00001916666667
+            self.q = 0.000006666666667
 
 
 """
@@ -230,6 +244,8 @@ class SeagliderFSM:
 
         self.time_arr = [0]
 
+        self.inst_power_arr  = [0]
+
         self.max_speed = 0
 
         self.s_x_change_down_arr = []
@@ -251,6 +267,7 @@ class SeagliderFSM:
         self.theta_arr = [0]
         self.delta_X_cg_arr = [0]
 
+
         #solve cb location: we are assuming cb is in middle of hull (neglecting non pressure hull displacement)
         self.X_cb = self.hull.x_hull
         self.X_cg = self.X_cb
@@ -260,6 +277,11 @@ class SeagliderFSM:
         #states:['hold_be_pos_up', 'hold_be_pos_down', 'move_down_deccel', 'move_up_accel', 'move_down_accel', 'move_up_deccel', 'end']
         # Define the initial state
         self.current_state = 'move_down_accel'
+
+
+    def calc_power_draw(self):
+        self.inst_power_arr.append( np.interp( depth_to_bar(self.y_disp_arr[-1]) ,self.pump.pump_pressure_arr, self.pump.pump_power_arr) )
+
 
     """
     method: calc theta
@@ -301,13 +323,12 @@ class SeagliderFSM:
 
         self.aoa = self.phi-self.theta #TODO: check this sign
 
-        self.L = 0.5*RHO_WATER*linear_interpolation(self.aoa,C_LIFT_LOOKUP)*self.hydrofoil.ref_area*velocity_magnitude**2
-        self.D = 0.5*RHO_WATER*linear_interpolation(self.aoa,C_DRAG_LOOKUP)*self.hull.ref_area*velocity_magnitude**2
+        self.L = 0.5*RHO_WATER*np.interp( np.abs((180/np.pi)*self.aoa),AOA_LOOKUP,C_LIFT_LOOKUP)*self.hydrofoil.ref_area*velocity_magnitude**2
+        self.D = 0.5*RHO_WATER*np.interp( np.abs((180/np.pi)*self.aoa),AOA_LOOKUP,C_DRAG_LOOKUP)*self.hull.ref_area*velocity_magnitude**2
 
 
         """debug print statements"""
         #print("theta: ", self.theta, "lift: ", self.L, "velo: ", (self.x_vel_arr[-1]**2 + self.y_vel_arr[-1]**2)**0.5, "net y force: ", self.F_y, "be pos: ", self.m_glider)
-        #print("aoa: ",f"{(180/np.pi)*self.aoa:.2f}", "theta: ",f"{(180/np.pi)*self.theta:.2f}", "phi: ",f"{(180/np.pi)*self.phi:.2f}", "lift coeff: ", linear_interpolation(self.aoa,C_LIFT_LOOKUP), "drag coeff: ",linear_interpolation(self.aoa,C_DRAG_LOOKUP))
 
 
     """
@@ -409,6 +430,7 @@ class SeagliderFSM:
 
                 self.tank_mass_arr.append(self.tank.m_current)
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
+                self.calc_power_draw()
 
                 """debug print statements"""
                 
@@ -514,6 +536,7 @@ class SeagliderFSM:
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
                 self.tank_mass_arr.append(self.tank.m_current)
+                self.calc_power_draw()
 
                 """debug print statements"""
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
@@ -549,6 +572,7 @@ class SeagliderFSM:
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
                 self.tank_mass_arr.append(self.tank.m_current)
+                self.calc_power_draw()
 
                 """debug print statements"""
                 #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
@@ -587,6 +611,7 @@ class SeagliderFSM:
 
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
                 self.tank_mass_arr.append(self.tank.m_current)
+                self.calc_power_draw()
 
                 """debug print statements"""
                 #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
@@ -637,7 +662,6 @@ class SeagliderFSM:
 
 
 
-
 """
 THIS IS THE MAIN BODY OF THE CODE
 the main unknown in the trajectory is the time to hold water in the tank so we sink enough to reach our desired depth.
@@ -649,10 +673,10 @@ the second loop(s) run the trajectory
 
 
 ###INPUT DIRECTLY FROM TCS MICROPUMP SIZING SPREADSHEET AND GORDON'S CFD SPREADSHEET
-tank = BallastTank(25.89929537, 4.5,  4, 0.75, 28.346472)
-pump = TCSmicropump("MGD2000F")
-hull = PressureHull( 5.709, 6.625, 36.4375, 1, 0.02227)
-hydrofoil = Hydrofoil(0.06968) # reference area in m^2
+tank = BallastTank(4.757013435, 4.5,  4, 0.75, 28.346472)
+pump = TCSmicropump("MGD1000F")
+hull = PressureHull( 5.709, 6.625, 36.4375, 1, 0.02777)
+hydrofoil = Hydrofoil(0.13935) # reference area in m^2
 
 m_glider = RHO_WATER*hull.V_displacement
 print(m_glider)
@@ -736,8 +760,11 @@ max_speed = np.max(seapup.x_vel_arr)
 glide_period = seapup.x_disp_arr[-1]
 
 #print a summary of noteworthy params
+print("wing ref area check: ",hydrofoil.ref_area, " (m^2)")
 print("max fwd speed: ",max_speed, " (m/s)")
 print("glide period: ",glide_period, '(m)')
+
+print("Total Pump Energy over a Yo: ", np.trapz(seapup.inst_power_arr,seapup.time_arr)*2.77778e-7, "kWh") #convert from Watt second to Watt hour
 
 
 
@@ -849,27 +876,27 @@ plt.ylabel('Y-Accel (m/s^2)')
 
 plt.subplot(2,8,12)
 plt.plot(seapup.time_arr, seapup.tank_mass_arr, label='Time Vs BE Position', color='blue')
-plt.xlabel('Time (S)')
+plt.xlabel('Time (s)')
 plt.ylabel('Tank Mas (kg)')
 
 plt.subplot(2,8,13)
-plt.plot(seapup.time_arr, seapup.aoa_arr, label='Time Vs aoa (deg)', color='blue')
-plt.xlabel('Time (S)')
-plt.ylabel('aoa (deg)')
+plt.plot(seapup.time_arr, seapup.inst_power_arr, label='Pump Power Draw (W) Vs Time (s)', color='blue')
+plt.xlabel('Time (s)')
+plt.ylabel('Power (W)')
 
 plt.subplot(2,8,14)
-plt.plot(seapup.time_arr, seapup.phi_arr, label='Time Vs phi (deg)', color='blue')
-plt.xlabel('Time (S)')
-plt.ylabel('phi (deg)')
+plt.plot(seapup.time_arr, seapup.aoa_arr, label='Time Vs aoa (deg)', color='blue')
+plt.xlabel('Time (s)')
+plt.ylabel('aoa (deg)')
 
 plt.subplot(2,8,15)
 plt.plot(seapup.time_arr, seapup.theta_arr, label='Time Vs theta (deg)', color='blue')
-plt.xlabel('Time (S)')
+plt.xlabel('Time (s)')
 plt.ylabel('theta (deg)')
 
 plt.subplot(2,8,16)
 plt.plot(seapup.time_arr, seapup.delta_X_cg_arr, label='Time Vs delta cb (m)', color='blue')
-plt.xlabel('Time (S)')
+plt.xlabel('Time (s)')
 plt.ylabel('delta X_cg (m)')
 
 plt.show()
