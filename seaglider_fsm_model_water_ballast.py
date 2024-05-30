@@ -469,6 +469,7 @@ class SeagliderFSM:
                 current_time += TIMESTEP
                 self.tank_mass_arr.append(self.tank.m_current)
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
+                self.inst_power_arr.append(0)
 
                 """debug print statements"""
                 #print("Fy: ", self.F_y, "Fb: ",RHO_WATER*GRAVITY*(hull.V_hull + self.V_be), "Fg: ",-m_glider*GRAVITY, "y lift: ", -self.L*np.cos(self.theta), "y drag", -self.D*np.sin(self.theta))
@@ -504,6 +505,7 @@ class SeagliderFSM:
                 current_time += TIMESTEP
                 self.tank_mass_arr.append(self.tank.m_current)
                 self.time_arr.append(self.time_arr[-1]+TIMESTEP)
+                self.inst_power_arr.append(0)
 
                 """debug print statements"""
                 #print("F_y (N): ", self.F_y, "F_x (N): ", self.F_x, "current len (in): ", self.current_len*39.3701)
@@ -674,7 +676,7 @@ the second loop(s) run the trajectory
 
 ###INPUT DIRECTLY FROM TCS MICROPUMP SIZING SPREADSHEET AND GORDON'S CFD SPREADSHEET
 tank = BallastTank(4.757013435, 4.5,  4, 0.75, 28.346472)
-pump = TCSmicropump("MGD1000F")
+pump = TCSmicropump("MGD2000F")
 hull = PressureHull( 5.709, 6.625, 36.4375, 1, 0.02777)
 hydrofoil = Hydrofoil(0.13935) # reference area in m^2
 
@@ -687,7 +689,7 @@ x_int = ( hull.x_hull*(m_glider-hull.mass)-tank.x_tank*(tank.m_neutral_buoy) )/ 
 movingmass = MovingMass(m_int, x_int)
 
 #setting the maximum depth to simulate to
-max_allowable_depth = -50 #m
+max_allowable_depth = -38 #m
 sim_depth = 0 #m
 
 #setup trajectory parameters --> either distance to go to or times to hold down
@@ -752,7 +754,7 @@ while(sim_depth > max_allowable_depth):
 
     #this is for testing purposes otherwise we get stuck in loop BUG: get stuck in loop
     #NOTE: DONT FORGET THIS WHEN DEBUGGING
-    break
+    #break
 
 
 sim_depth = np.min(seapup.y_disp_arr)
